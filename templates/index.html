@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Home</title>
+</head>
+<body>
+{{ var }}
+{% for i in numbers %}
+    {{ i }}
+{% endblock %}
+<br>
+<a href="{{ base_url }}about/">About</a>
+<br>
+Session id : {{ session_id }}
+</body>
+</html>
