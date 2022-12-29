@@ -1,3 +1,4 @@
+from wsgiref.simple_server import make_server
 from shogun.main import Shogun
 from urls import urls
 import settings
@@ -11,4 +12,9 @@ def get_settings():
     return settings_dict
 
 
-shogun = Shogun(urls=urls, settings=get_settings(), middlewares=middlewares)
+application = Shogun(urls=urls, settings=get_settings(), middlewares=middlewares)
+
+
+with make_server('', 8000, application) as httpd:
+    print("Запуск на порту 8000...")
+    httpd.serve_forever()

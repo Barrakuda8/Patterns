@@ -3,7 +3,7 @@ from shogun.request import Request
 
 class Response:
 
-    def __init__(self, request: Request, status_code: int = 200, headers: dict = None, body: str = ''):
+    def __init__(self, request: Request, status_code: str = '200 OK', headers: dict = None, body: str = ''):
         self.status_code = status_code
         self.headers = {}
         self.body = b''

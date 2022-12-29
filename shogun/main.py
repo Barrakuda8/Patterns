@@ -23,7 +23,7 @@ class Shogun:
         self.apply_middlewares_to_request(request)
         response = self.get_response(environ, view, request)
         self.apply_middlewares_to_response(response)
-        start_response(str(response.status_code), response.headers.items())
+        start_response(str(response.status_code), list(response.headers.items()))
         return iter([response.body])
 
     @staticmethod
