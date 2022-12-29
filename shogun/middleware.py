@@ -19,7 +19,10 @@ class Session(BaseMiddleware):
         cookie = request.environ.get('HTTP_COOKIE', None)
         if not cookie:
             return
-        session_id = parse_qs(cookie)['session_id'][0]
+        try:
+            session_id = parse_qs(cookie)['session_id'][0]
+        except KeyError:
+            return
         request.extra['session_id'] = session_id
 
     def to_response(self, response: Response):

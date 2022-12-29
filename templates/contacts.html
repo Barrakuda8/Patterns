@@ -1,10 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Contacts</title>
-</head>
-<body>
+{% extends base %}
+
+{% block title %}
+Contacts
+{% endblock title %}
+
+{% block content %}
     {{ var }}
     <br>
     <form action="" method="post">
@@ -17,8 +17,4 @@
         <input type="submit">
     </form>
     <br>
-    <a href="{{ base_url }}">Home</a>
-    <br>
-    <a href="{{ base_url }}about/">About</a>
-</body>
-</html>
+{% endblock content %}
