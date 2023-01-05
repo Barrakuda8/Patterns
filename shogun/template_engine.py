@@ -8,7 +8,7 @@ BASE_PATTERN = re.compile(r'{% extends (?P<base>[a-zA-Z_]+) %}')
 BASE_BLOCK_PATTERN = re.compile(r'{% block [a-zA-Z_]+ %}')
 INCLUDE_PATTERN = re.compile(r'{% include [a-zA-Z_]+ %}')
 FOR_PATTERN = re.compile(r'{% [a-zA-Z_]+ : for [a-zA-Z_]+ in [a-zA-Z_]+ %}')
-VAR_PATTERN = re.compile(r'{{ (?P<variable>[a-zA-Z_]+) }}')
+VAR_PATTERN = re.compile(r'{{ (?P<variable>[a-zA-Z0-9_.\[\]"\']+) }}')
 
 
 class Engine:
@@ -89,7 +89,13 @@ class Engine:
 
         for var in used_vars:
             template_var = '{{ %s }}' % var
-            block = re.sub(template_var, str(context.get(var, '')), block)
+            if var.find('.') != -1:
+                variable = var[:var.find('.')]
+                param = var[var.find('.') + 1:]
+                context_var = str(context.get(variable, '').__getattribute__(param))
+            else:
+                context_var = str(context.get(var, ''))
+            block = re.sub(template_var, context_var, block)
 
         return block
 
