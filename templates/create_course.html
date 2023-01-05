@@ -1,0 +1,29 @@
+{% extends base %}
+
+{% block title %}
+Create course
+{% endblock title %}
+
+{% block content %}
+<form action="" method="post">
+        <input type="text" placeholder="name" name="name">
+        <br>
+        <select name="type">
+            {% types_list : for type in types %}
+            <option value="{{ type }}">{{ type }}</option>
+            {% endfor types_list %}
+        </select>
+        <br>
+        <select name="category_id">
+            {% categories_list : for category in categories %}
+            <option value="{{ category.id }}">{{ category.name }}</option>
+            {% endfor categories_list %}
+        </select>
+        <br>
+        <input type="text" placeholder="address if needed" name="address">
+        <br>
+        <input type="text" placeholder="platform if needed" name="platform">
+        <br>
+        <input type="submit">
+</form>
+{% endblock content %}

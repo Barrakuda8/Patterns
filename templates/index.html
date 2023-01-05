@@ -5,11 +5,49 @@ Home
 {% endblock title %}
 
 {% block content %}
-    {{ var }}
-    <br>
-    {% one : for i in numbers %}
-        {{ i }}
-    {% endfor one %}
-    <br>
-    Session id : {{ session_id }}
+
+<table>
+    <th>Id</th>
+    <th>Name</th>
+    <th>Courses</th>
+{% categories_list : for category in categories %}
+    <tr>
+        <td>{{ category.id }}</td>
+        <td>{{ category.name }}</td>
+        <td>{{ category.courses_count }}</td>
+    </tr>
+{% endfor categories_list %}
+</table>
+
+<p><a href="{{ base_url }}categories/create/">Create category</a></p>
+
+<table>
+    <th>Id</th>
+    <th>Name</th>
+    <th>Category</th>
+{% courses_list : for course in courses %}
+    <tr>
+        <td>{{ course.id }}</td>
+        <td>{{ course.name }}</td>
+        <td>{{ course.category }}</td>
+        <td><a href="{{ base_url }}courses/copy/?course_id={{ course.id }}">Copy</a></td>
+    </tr>
+{% endfor courses_list %}
+</table>
+
+<p><a href="{{ base_url }}courses/create/">Create course</a></p>
+
+<table>
+    <th>Id</th>
+    <th>Username</th>
+{% users_list : for user in users %}
+    <tr>
+        <td>{{ user.id }}</td>
+        <td>{{ user.username }}</td>
+    </tr>
+{% endfor users_list %}
+</table>
+
+<p><a href="{{ base_url }}users/create">Create user</a></p>
+
 {% endblock content %}
