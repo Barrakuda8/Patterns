@@ -8,6 +8,13 @@ Create category
 <form action="" method="post">
         <input type="text" placeholder="name" name="name">
         <br>
+        <select name="category_id">
+            <option value="-1" selected>-</option>
+            {% categories_list : for category in categories %}
+            <option value="{{ category.id }}">{{ category.name }}</option>
+            {% endfor categories_list %}
+        </select>
+        <br>
         <input type="submit">
 </form>
 {% endblock content %}

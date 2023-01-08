@@ -7,15 +7,21 @@ from settings import BASE_DIR, LOGS_DIR_NAME
 class Category:
     auto_id = 0
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, category=None):
         self.id = Category.auto_id
         Category.auto_id += 1
         self.name = name
         self.courses = []
+        self.subcategories = []
+        self.category = category
 
     @property
     def courses_count(self):
         return len(self.courses)
+
+    @property
+    def get_category(self):
+        return self.category.name if self.category else '-'
 
 
 class Course:
@@ -113,10 +119,14 @@ class Engine:
         self.teachers = []
         self.admins = []
 
-    def create_category(self, name: str):
-        category = Category(name)
-        self.categories.append(category)
-        return category
+    def create_category(self, name: str, parent_category=None):
+        new_category = Category(name, parent_category)
+        if not parent_category:
+            self.categories.append(new_category)
+        else:
+            self.categories.insert(self.categories.index(parent_category) + 1, new_category)
+            parent_category.subcategories.append(new_category)
+        return new_category
 
     def create_course(self, type_: str, *args, **kwargs):
         course = CourseFactory.create(type_, *args, **kwargs)

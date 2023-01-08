@@ -44,12 +44,15 @@ class Contacts(View):
 class CategoryCreate(View):
 
     def get(self, request: Request, *args, **kwargs) -> Response:
-        body = build_template(request, {'base_url': request.base_url, 'session_id': request.session_id}, 'create_category.html')
+        body = build_template(request, {'categories': engine.categories, 'base_url': request.base_url, 'session_id': request.session_id}, 'create_category.html')
         return Response(request, body=body)
 
     def post(self, request: Request, *args, **kwargs) -> Response:
+        print(request.POST)
         name = request.POST.get('name')[0]
-        engine.create_category(name)
+        category_id = int(request.POST.get('category_id')[0])
+        category = engine.get_category_by_id(category_id) if category_id >= 0 else None
+        engine.create_category(name, category)
         category_logger.log(f'{name} is created')
         body = build_template(request, {'type': 'category', 'name': name, 'base_url': request.base_url}, 'ok_page.html')
         return Response(request, body=body)
