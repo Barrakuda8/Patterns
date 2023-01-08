@@ -9,11 +9,13 @@ Home
 <table>
     <th>Id</th>
     <th>Name</th>
+    <th>Parent category</th>
     <th>Courses</th>
 {% categories_list : for category in categories %}
     <tr>
         <td>{{ category.id }}</td>
         <td>{{ category.name }}</td>
+        <td>{{ category.get_category }}</td>
         <td>{{ category.courses_count }}</td>
     </tr>
 {% endfor categories_list %}
