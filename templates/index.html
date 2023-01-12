@@ -6,6 +6,7 @@ Home
 
 {% block content %}
 
+<b>Categories</b>
 <table>
     <th>Id</th>
     <th>Name</th>
@@ -23,6 +24,7 @@ Home
 
 <p><a href="{{ base_url }}categories/create/">Create category</a></p>
 
+<b>Courses</b>
 <table>
     <th>Id</th>
     <th>Name</th>
@@ -32,6 +34,7 @@ Home
         <td>{{ course.id }}</td>
         <td>{{ course.name }}</td>
         <td>{{ course.category }}</td>
+        <td><a href="{{ base_url }}courses/edit/?course_id={{ course.id }}">Edit</a></td>
         <td><a href="{{ base_url }}courses/copy/?course_id={{ course.id }}">Copy</a></td>
     </tr>
 {% endfor courses_list %}
@@ -39,15 +42,43 @@ Home
 
 <p><a href="{{ base_url }}courses/create/">Create course</a></p>
 
+<b>Students</b>
 <table>
     <th>Id</th>
     <th>Username</th>
-{% users_list : for user in users %}
+{% students_list : for user in students %}
     <tr>
         <td>{{ user.id }}</td>
         <td>{{ user.username }}</td>
+        <td><a href="{{ base_url }}users/courses/?user_id={{ user.id }}">Courses</a></td>
     </tr>
-{% endfor users_list %}
+{% endfor students_list %}
+</table>
+<br>
+<b>Teachers</b>
+<table>
+    <th>Id</th>
+    <th>Username</th>
+{% teachers_list : for user in teachers %}
+    <tr>
+        <td>{{ user.id }}</td>
+        <td>{{ user.username }}</td>
+        <td><a href="{{ base_url }}users/courses/?user_id={{ user.id }}">Courses</a></td>
+    </tr>
+{% endfor teachers_list %}
+</table>
+<br>
+<b>Admins</b>
+<table>
+    <th>Id</th>
+    <th>Username</th>
+{% admins_list : for user in admins %}
+    <tr>
+        <td>{{ user.id }}</td>
+        <td>{{ user.username }}</td>
+        <td><a href="{{ base_url }}users/courses/?user_id={{ user.id }}">Courses</a></td>
+    </tr>
+{% endfor admins_list %}
 </table>
 
 <p><a href="{{ base_url }}users/create">Create user</a></p>

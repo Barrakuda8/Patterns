@@ -1,7 +1,47 @@
+import abc
 from copy import deepcopy
-import os
-import datetime
-from settings import BASE_DIR, LOGS_DIR_NAME
+from jsonpickle import dumps
+
+
+class Observer(metaclass=abc.ABCMeta):
+
+    def __init__(self, user):
+        self.subject = None
+        self.user = user
+
+    @abc.abstractmethod
+    def update(self, param, old, new):
+        pass
+
+
+class EmailObserver(Observer):
+
+    def update(self, param, old, new):
+        print(f'EMAIL (to {self.user.username}) >>> Course {self.subject.name}, {param} is changed from {old} to {new}')
+
+
+class SMSObserver(Observer):
+
+    def update(self, param, old, new):
+        print(f'SMS (to {self.user.username}) >>> Course {self.subject.name}, {param} is changed from {old} to {new}')
+
+
+class Subject:
+
+    def __init__(self):
+        self.observers = []
+
+    def attach(self, observer):
+        observer.subject = self
+        self.observers.append(observer)
+
+    def detach(self, observer):
+        observer.subject = None
+        self.observers.remove(observer)
+
+    def notify(self, state, old, new):
+        for observer in self.observers:
+            observer.update(state, old, new)
 
 
 class Category:
@@ -24,7 +64,7 @@ class Category:
         return self.category.name if self.category else '-'
 
 
-class Course:
+class Course(Subject):
     auto_id = 0
 
     def __init__(self, name: str, category):
@@ -33,12 +73,34 @@ class Course:
         self.name = name
         self.category = category
         self.category.courses.append(self)
+        self.users = {'students': [], 'teachers': [], 'admins': []}
+        super().__init__()
 
     def __str__(self):
         return self.name
 
     def clone(self):
         return deepcopy(self)
+
+    def add_user(self, user):
+        self.users[f'{user.type_}s'].append(user)
+
+    def add_observer(self, user, method: str = 'email'):
+        if method.lower() == 'sms':
+            observer = SMSObserver(user)
+        else:
+            observer = EmailObserver(user)
+        self.attach(observer)
+
+    def edit(self, name, *args, **kwargs):
+        if name != self.name:
+            old = self.name
+            self.name = name
+            self.notify('name', old, self.name)
+        self.edit_params(*args, **kwargs)
+
+    def edit_params(self, *args, **kwargs):
+        pass
 
 
 class OfflineCourse(Course):
@@ -48,6 +110,13 @@ class OfflineCourse(Course):
     def __init__(self, address: str, *args):
         super().__init__(*args)
         self.address = address
+        self.type_ = 'offline'
+
+    def edit_params(self, address):
+        if address != self.address:
+            old = self.address
+            self.address = address
+            self.notify('address', old, self.address)
 
 
 class OnlineCourse(Course):
@@ -57,6 +126,13 @@ class OnlineCourse(Course):
     def __init__(self, platform: str, *args):
         super().__init__(*args)
         self.platform = platform
+        self.type_ = 'online'
+
+    def edit_params(self, platform):
+        if platform != self.platform:
+            old = self.platform
+            self.platform = platform
+            self.notify('platform', old, self.platform)
 
 
 class CourseFactory:
@@ -79,10 +155,15 @@ class CourseFactory:
 class User:
     auto_id = 0
 
-    def __init__(self, username: str):
+    def __init__(self, type_: str, username: str):
         self.id = User.auto_id
         User.auto_id += 1
         self.username = username
+        self.type_ = type_
+        self.courses = []
+
+    def add_course(self, course):
+        self.courses.append(course)
 
 
 class Student(User):
@@ -107,7 +188,7 @@ class UserFactory:
 
     @classmethod
     def create(cls, type_: str, *args, **kwargs):
-        return cls.types[type_](*args, **kwargs)
+        return cls.types[type_](type_, *args, **kwargs)
 
 
 class Engine:
@@ -133,11 +214,17 @@ class Engine:
         self.courses.append(course)
         return course
 
+    def edit_course(self, id_: int, name: str, *args, **kwargs):
+        course = self.get_course_by_id(id_)
+        course.edit(name, *args, **kwargs)
+        return course
+
     def copy_course(self, course_id: int, name: str):
         new_course = self.get_course_by_id(course_id).clone()
         new_course.id = Course.auto_id
         Course.auto_id += 1
         new_course.name = name
+        new_course.users = {'students': [], 'teachers': [], 'admins': []}
         self.courses.append(new_course)
         new_course.category.courses.append(new_course)
         self.get_category_by_id(new_course.category.id).courses.append(new_course)
@@ -163,6 +250,12 @@ class Engine:
                 return course
         return None
 
+    def get_user_by_id(self, id_: int):
+        for user in self.get_all_users():
+            if user.id == id_:
+                return user
+        return None
+
     @staticmethod
     def get_courses_types():
         return CourseFactory.types.keys()
@@ -174,6 +267,15 @@ class Engine:
     @staticmethod
     def get_courses_slots():
         return CourseFactory.types_slots
+
+
+class JSONSerializer:
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def get_json(self):
+        return dumps(self.obj)
 
 
 class SingletonByName(type):
@@ -197,9 +299,9 @@ class SingletonByName(type):
 
 class Logger(metaclass=SingletonByName):
 
-    def __init__(self, name):
+    def __init__(self, name, writer):
         self.name = name
+        self.writer = writer
 
     def log(self, text):
-        with open(os.path.join(BASE_DIR, LOGS_DIR_NAME, f'{self.name.replace(" ", "_")}_log.txt'), 'a') as f:
-            f.writelines(f'{datetime.datetime.now()}\t{self.name}\t\t{text}\n')
+        self.writer.write(self.name, text)
