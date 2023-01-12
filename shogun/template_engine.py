@@ -8,6 +8,7 @@ BASE_PATTERN = re.compile(r'{% extends (?P<base>[a-zA-Z_]+) %}')
 BASE_BLOCK_PATTERN = re.compile(r'{% block [a-zA-Z_]+ %}')
 INCLUDE_PATTERN = re.compile(r'{% include [a-zA-Z_]+ %}')
 FOR_PATTERN = re.compile(r'{% [a-zA-Z_]+ : for [a-zA-Z_]+ in [a-zA-Z_]+ %}')
+IF_PATTERN = re.compile(r'{% [a-zA-Z_]+ : if .+ %}')
 VAR_PATTERN = re.compile(r'{{ (?P<variable>[a-zA-Z0-9_.\[\]"\']+) }}')
 
 
@@ -35,6 +36,11 @@ class Engine:
         return re.compile(fr'{{% block {block_name} %}}(?P<content>[\S\s]+)(?={{% endblock {block_name} %}}){{% endblock {block_name} %}}')
 
     @staticmethod
+    def get_if_pattern(block_name: str):
+        return re.compile(
+            fr'{{% {block_name} : if (?P<left_variable>.+) == (?P<right_variable>.+) %}}(?P<if_true>[\S\s]+)(?={{% else %}}){{% else %}}(?P<if_false>[\S\s]+)(?={{% endif {block_name} %}}){{% endif {block_name} %}}')
+
+    @staticmethod
     def get_for_pattern(block_name: str):
         return re.compile(
             fr'{{% {block_name} : for (?P<variable>[a-zA-Z_]+) in (?P<seq>[a-zA-Z_]+) %}}(?P<content>[\S\s]+)(?={{% endfor {block_name} %}}){{% endfor {block_name} %}}')
@@ -47,6 +53,11 @@ class Engine:
     @staticmethod
     def get_include_name(block: str) -> str:
         return block.replace('{% include ', '').replace(' %}', '')
+
+    @staticmethod
+    def get_if_names(block: str) -> List[str]:
+        used_if = IF_PATTERN.findall(block)
+        return [i[3:i.find(':') - 1] for i in used_if]
 
     @staticmethod
     def get_for_names(block: str) -> List[str]:
@@ -99,6 +110,20 @@ class Engine:
 
         return block
 
+    def build_if(self, context: dict, block: str) -> str:
+        if_names = self.get_if_names(block)
+
+        for name in if_names:
+            pattern = self.get_if_pattern(name)
+            current_if = pattern.search(block)
+            left_variable = self.build_vars(context, current_if.group('left_variable'))
+            right_variable = self.build_vars(context, current_if.group('right_variable'))
+            result = bool(left_variable == right_variable)
+            build_if = current_if.group('if_true') if result else current_if.group('if_false')
+            block = re.sub(pattern, build_if, block)
+
+        return block
+
     def build_for(self, context: dict, block: str) -> str:
         for_names = self.get_for_names(block)
 
@@ -118,6 +143,7 @@ class Engine:
             template = self.build_base(template)
         template = self.build_includes(template)
         template = self.build_for(context, template)
+        template = self.build_if(context, template)
         return self.build_vars(context, template)
 
 

@@ -7,6 +7,9 @@ urls = [
     Url('^contacts$', Contacts),
     Url('^categories/create$', CategoryCreate),
     Url('^courses/create$', CourseCreate),
+    Url('^courses/edit$', CourseEdit),
     Url('^courses/copy', CourseCopy),
     Url('^users/create$', UserCreate),
+    Url('^users/courses$', UserCourses),
+    Url('^api/courses$', APICourses)
 ]
