@@ -7,6 +7,8 @@ Edit course
 {% block content %}
 <form action="" method="post">
         <input type="hidden" name="course_id" value="{{ course.id }}">
+        <input type="hidden" name="type" value="{{ course.type_ }}">
+        <input type="hidden" name="category_id" value="{{ course.category_id }}">
         <input type="text" placeholder="name" value="{{ course.name }}" name="name">
         <br>
         {% address_if : if {{ course.type_ }} == offline %}
