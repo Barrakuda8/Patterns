@@ -28,29 +28,6 @@ class Index(View):
         return Response(request, body=body)
 
 
-class About(View):
-
-    def get(self, request: Request, *args, **kwargs) -> Response:
-        body = build_template(request, {'var': 'Why?', 'chars': ['a', 'b', 'c', 'd', 'e'],
-                                        'base_url': request.base_url}, 'about.html')
-        return Response(request, body=body)
-
-
-class Contacts(View):
-
-    def get(self, request: Request, *args, **kwargs) -> Response:
-        body = build_template(request, {'var': 'What?', 'base_url': request.base_url}, 'contacts.html')
-        return Response(request, body=body)
-
-    def post(self, request: Request, *args, **kwargs) -> Response:
-        title = request.POST.get('title')[0]
-        text = request.POST.get('text')[0]
-        email = request.POST.get('email')[0]
-        body = build_template(request, {'var': 'Message', 'title': title, 'text': text, 'email': email,
-                                        'base_url': request.base_url}, 'contacts_show.html')
-        return Response(request, body=body)
-
-
 class CategoryCreate(View):
 
     def get(self, request: Request, *args, **kwargs) -> Response:
@@ -61,13 +38,53 @@ class CategoryCreate(View):
 
     def post(self, request: Request, *args, **kwargs) -> Response:
         name = request.POST.get('name')[0]
-        category_id = int(request.POST.get('category_id')[0])
-        category = MapperRegistry.get_mapper_by_name('category').find_by_id(category_id) if category_id >= 0 else None
+        parent_category_id = int(request.POST.get('parent_category_id')[0])
+        category = MapperRegistry.get_mapper_by_name('category').find_by_id(parent_category_id) if parent_category_id >= 0 else None
         new_category = engine.create_category(name, category)
         new_category.mark_new()
         UnitOfWork.get_current().commit()
         category_logger.log(f'{name} is created')
         body = build_template(request, {'type': 'category', 'name': name, 'action': 'created',
+                                        'base_url': request.base_url}, 'ok_page.html')
+        return Response(request, body=body)
+
+
+class CategoryEdit(View):
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        category = MapperRegistry.get_mapper_by_name('category').find_by_id(int(request.GET.get('category_id')[0]))
+        categories = MapperRegistry.get_mapper_by_name('category').all()
+        categories = [cat for cat in categories if cat.id not in category.subcategories and cat.id != category.id]
+        body = build_template(request, {'category': category,
+                                        'categories': categories,
+                                        'base_url': request.base_url, 'session_id': request.session_id},
+                              'edit_category.html')
+        return Response(request, body=body)
+
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        name = request.POST.get('name')[0]
+        category_id = int(request.POST.get('category_id')[0])
+        parent_category_id = int(request.POST.get('parent_category_id')[0])
+        category = MapperRegistry.get_mapper_by_name('category').\
+            find_by_id(parent_category_id) if parent_category_id >= 0 else None
+        new_category = engine.create_category(name, category)
+        new_category.id = category_id
+        new_category.mark_dirty()
+        UnitOfWork.get_current().commit()
+        category_logger.log(f'{name} is edited')
+        body = build_template(request, {'type': 'category', 'name': name, 'action': 'edited',
+                                        'base_url': request.base_url}, 'ok_page.html')
+        return Response(request, body=body)
+
+
+class CategoryDelete(View):
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        category = MapperRegistry.get_mapper_by_name('category').find_by_id(int(request.GET.get('category_id')[0]))
+        category.mark_removed()
+        UnitOfWork.get_current().commit()
+        category_logger.log(f'{category.name} is deleted')
+        body = build_template(request, {'type': 'category', 'name': category.name, 'action': 'deleted',
                                         'base_url': request.base_url}, 'ok_page.html')
         return Response(request, body=body)
 
@@ -105,7 +122,9 @@ class CourseEdit(View):
 
     def get(self, request: Request, *args, **kwargs) -> Response:
         course = MapperRegistry.get_mapper_by_name('course').find_by_id(int(request.GET.get('course_id')[0]))
-        body = build_template(request, {'course': course, 'base_url': request.base_url,
+        body = build_template(request, {'course': course,
+                                        'categories': MapperRegistry.get_mapper_by_name('category').all(),
+                                        'types': engine.get_courses_types(), 'base_url': request.base_url,
                                         'session_id': request.session_id}, 'edit_course.html')
         return Response(request, body=body)
 
@@ -153,6 +172,18 @@ class CourseCopy(View):
         return Response(request, body=body)
 
 
+class CourseDelete(View):
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        course = MapperRegistry.get_mapper_by_name('course').find_by_id(int(request.GET.get('course_id')[0]))
+        course.mark_removed()
+        UnitOfWork.get_current().commit()
+        course_logger.log(f'{course.name} is deleted')
+        body = build_template(request, {'type': 'course', 'name': course.name, 'action': 'deleted',
+                                        'base_url': request.base_url}, 'ok_page.html')
+        return Response(request, body=body)
+
+
 class UserCreate(View):
 
     def get(self, request: Request, *args, **kwargs) -> Response:
@@ -168,6 +199,40 @@ class UserCreate(View):
         UnitOfWork.get_current().commit()
         user_logger.log(f'{username} (type: {type_}) is created')
         body = build_template(request, {'type': 'user', 'name': username, 'action': 'created',
+                                        'base_url': request.base_url}, 'ok_page.html')
+        return Response(request, body=body)
+
+
+class UserEdit(View):
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        user = MapperRegistry.get_mapper_by_name('user').find_by_id(int(request.GET.get('user_id')[0]))
+        body = build_template(request, {'user': user, 'types': engine.get_users_types(), 'base_url': request.base_url,
+                                        'session_id': request.session_id}, 'edit_user.html')
+        return Response(request, body=body)
+
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        user_id = int(request.POST.get('user_id')[0])
+        type_ = request.POST.get('type')[0]
+        username = request.POST.get('username')[0]
+        user = engine.create_user(type_, username)
+        user.id = user_id
+        user.mark_dirty()
+        UnitOfWork.get_current().commit()
+        user_logger.log(f'{username} (type: {type_}) is edited')
+        body = build_template(request, {'type': 'user', 'name': username, 'action': 'edited',
+                                        'base_url': request.base_url}, 'ok_page.html')
+        return Response(request, body=body)
+
+
+class UserDelete(View):
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        user = MapperRegistry.get_mapper_by_name('user').find_by_id(int(request.GET.get('user_id')[0]))
+        user.mark_removed()
+        UnitOfWork.get_current().commit()
+        user_logger.log(f'{user.username} is deleted')
+        body = build_template(request, {'type': 'user', 'name': user.username, 'action': 'deleted',
                                         'base_url': request.base_url}, 'ok_page.html')
         return Response(request, body=body)
 
