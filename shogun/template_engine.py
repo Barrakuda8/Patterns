@@ -51,10 +51,6 @@ class Engine:
         return [i.replace('{% block ', '').replace(' %}', '') for i in base_blocks]
 
     @staticmethod
-    def get_include_name(block: str) -> str:
-        return block.replace('{% include ', '').replace(' %}', '')
-
-    @staticmethod
     def get_if_names(block: str) -> List[str]:
         used_if = IF_PATTERN.findall(block)
         return [i[3:i.find(':') - 1] for i in used_if]
@@ -70,7 +66,7 @@ class Engine:
             return block
 
         for inc in used_includes:
-            inc_name = self.get_include_name(inc)
+            inc_name = inc.replace('{% include ', '').replace(' %}', '')
             inc_block = self.get_template_as_string(f'{inc_name}.html', True)
             template_inc = f'{{% include {inc_name} %}}'
             block = re.sub(template_inc, inc_block, block)
@@ -132,7 +128,8 @@ class Engine:
             current_for = pattern.search(block)
             build_for = ''
             for i in context.get(current_for.group('seq'), []):
-                build_for += self.build_vars({**context, current_for.group('variable'): i}, current_for.group('content'))
+                build_if = self.build_if({**context, current_for.group('variable'): i}, current_for.group('content'))
+                build_for += self.build_vars({**context, current_for.group('variable'): i}, build_if)
             block = re.sub(pattern, build_for, block)
 
         return block
@@ -150,6 +147,8 @@ class Engine:
 def build_template(request: Request, context: dict, template_name: str) -> str:
     assert request.settings.get('BASE_DIR')
     assert request.settings.get('TEMPLATES_DIR_NAME')
+    assert request.settings.get('INCLUDES_DIR_NAME')
 
-    engine = Engine(request.settings.get('BASE_DIR'), request.settings.get('TEMPLATES_DIR_NAME'), request.settings.get('INCLUDES_DIR_NAME'))
+    engine = Engine(request.settings.get('BASE_DIR'), request.settings.get('TEMPLATES_DIR_NAME'),
+                    request.settings.get('INCLUDES_DIR_NAME'))
     return engine.build(context, template_name)

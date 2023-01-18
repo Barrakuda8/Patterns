@@ -5,15 +5,14 @@ Add user to course
 {% endblock title %}
 
 {% block content %}
-<p>Please select courses for {{ user.username }}</p>
 <form action="" method="post">
+    <p>Please select courses for {{ user.username }}</p>
         <input type="hidden" name="user_id" value="{{ user.id }}">
         <select name="course_id">
             {% courses_list : for course in courses %}
             <option value="{{ course.id }}">{{ course.name }}</option>
             {% endfor courses_list %}
         </select>
-        <br>
         <select name="notification_method">
             <option value="email" selected>Email</option>
             <option value="sms">SMS</option>

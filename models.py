@@ -3,7 +3,7 @@ import abc
 import sqlite3
 from copy import deepcopy
 from jsonpickle import dumps
-from settings import BASE_DIR, DB_NAME
+from settings import BASE_DIR, DB_PATH
 from db.unit_of_work import UnitOfWork
 
 
@@ -76,6 +76,10 @@ class Category(DomainObject):
     def get_category(self):
         return self.category.name if self.category else '-'
 
+    @property
+    def get_category_id(self):
+        return self.category.id if self.category else -1
+
 
 class Course(Subject, DomainObject):
 
@@ -105,6 +109,10 @@ class Course(Subject, DomainObject):
         else:
             observer = EmailObserver(user)
         self.attach(observer)
+
+    @property
+    def student_count(self):
+        return len(self.users['students'])
 
 
 class OfflineCourse(Course):
@@ -150,6 +158,10 @@ class User(DomainObject):
         self.username = username
         self.type_ = type_
         self.courses = []
+
+    @property
+    def course_count(self):
+        return len(self.courses)
 
 
 class Student(User):
@@ -226,15 +238,23 @@ class CategoryMapper:
         statement = f"SELECT * FROM {self.table_name}"
         self.cursor.execute(statement)
         result = []
+        primaries = []
+        categories = {}
         for cat in self.cursor.fetchall():
             id_, name, category_id = cat
             category = self.construct(id_, name)
             if not category_id:
-                result.append(category)
-            else:
-                category.category = list(filter(lambda x: x.id == category_id, result))[0]
-                result.insert(result.index(category.category) + 1, category)
+                primaries.append(id_)
+            categories[id_] = category
+        self._sort_algo(primaries, result, categories)
         return result
+
+    def _sort_algo(self, ids, result, categories, parent=None):
+        for id_ in ids:
+            category = categories[id_]
+            category.category = parent
+            result.append(category)
+            self._sort_algo(category.subcategories, result, categories, category)
 
     def find_by_id(self, id_):
         statement = f"SELECT name, category_id FROM {self.table_name} WHERE id={id_}"
@@ -287,9 +307,12 @@ class CategoryMapper:
             raise Exception(e.args)
 
     def update(self, obj):
+        category_id = f"{obj.category.id}" if obj.category else "NULL"
+        print(category_id)
         statement = f"UPDATE {self.table_name} " \
-                    f"SET name='{obj.name}', category_id={obj.category.id} " \
+                    f"SET name='{obj.name}', category_id={category_id} " \
                     f"WHERE id={obj.id}"
+        print(statement)
         self.cursor.execute(statement)
 
         try:
@@ -297,8 +320,9 @@ class CategoryMapper:
         except Exception as e:
             raise Exception(e.args)
 
-    def delete(self, id_):
-        statement = f"DELETE FROM {self.table_name} WHERE id={id_}"
+    def delete(self, obj):
+        self.cursor.execute('PRAGMA foreign_keys = on')
+        statement = f"DELETE FROM {self.table_name} WHERE id={obj.id}"
         self.cursor.execute(statement)
 
         try:
@@ -400,8 +424,9 @@ class CourseMapper:
         except Exception as e:
             raise Exception(e.args)
 
-    def delete(self, id_):
-        statement = f"DELETE FROM {self.table_name} WHERE id={id_}"
+    def delete(self, obj):
+        self.cursor.execute('PRAGMA foreign_keys = on')
+        statement = f"DELETE FROM {self.table_name} WHERE id={obj.id}"
         self.cursor.execute(statement)
 
         try:
@@ -487,7 +512,7 @@ class UserMapper:
 
     def update(self, obj):
         statement = f"UPDATE {self.table_name} " \
-                    f"SET name='{obj.name}', type='{obj.type_}' " \
+                    f"SET username='{obj.username}', type='{obj.type_}' " \
                     f"WHERE id={obj.id}"
         self.cursor.execute(statement)
 
@@ -496,8 +521,9 @@ class UserMapper:
         except Exception as e:
             raise Exception(e.args)
 
-    def delete(self, id_):
-        statement = f"DELETE FROM {self.table_name} WHERE id={id_}"
+    def delete(self, obj):
+        self.cursor.execute('PRAGMA foreign_keys = on')
+        statement = f"DELETE FROM {self.table_name} WHERE id={obj.id}"
         self.cursor.execute(statement)
 
         try:
@@ -529,8 +555,8 @@ class CourseUserMapper:
         except Exception as e:
             raise Exception(e.args)
 
-    def delete(self, course_id, user_id):
-        statement = f"DELETE FROM {self.table_name} WHERE course_id={course_id} AND user_id={user_id}"
+    def delete(self, obj):
+        statement = f"DELETE FROM {self.table_name} WHERE course_id={obj.course_id} AND user_id={obj.user_id}"
         self.cursor.execute(statement)
 
         try:
@@ -539,7 +565,7 @@ class CourseUserMapper:
             raise Exception(e.args)
 
 
-connect = sqlite3.connect(os.path.join(BASE_DIR, 'db', DB_NAME))
+connect = sqlite3.connect(os.path.join(BASE_DIR, DB_PATH))
 
 
 class MapperRegistry:

@@ -7,14 +7,12 @@ Create category
 {% block content %}
 <form action="" method="post">
         <input type="text" placeholder="name" name="name">
-        <br>
-        <select name="category_id">
+        <select name="parent_category_id">
             <option value="-1" selected>-</option>
-            {% categories_list : for category in categories %}
-            <option value="{{ category.id }}">{{ category.name }}</option>
+            {% categories_list : for cat in categories %}
+            <option value="{{ cat.id }}">{{ cat.name }}</option>
             {% endfor categories_list %}
         </select>
-        <br>
         <input type="submit">
 </form>
 {% endblock content %}

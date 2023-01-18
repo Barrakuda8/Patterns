@@ -7,16 +7,42 @@ Edit course
 {% block content %}
 <form action="" method="post">
         <input type="hidden" name="course_id" value="{{ course.id }}">
-        <input type="hidden" name="type" value="{{ course.type_ }}">
-        <input type="hidden" name="category_id" value="{{ course.category_id }}">
         <input type="text" placeholder="name" value="{{ course.name }}" name="name">
-        <br>
+        <select name="category_id">
+            {% categories_list : for category in categories %}
+            {% category_if : if {{ category.id }} == {{ course.category_id }} %}
+            <option value="{{ category.id }}" selected>{{ category.name }}</option>
+            {% else %}
+            <option value="{{ category.id }}">{{ category.name }}</option>
+            {% endif category_if %}
+            {% endfor categories_list %}
+        </select>
+        <select name="type" id="type">
+            {% types_list : for type in types %}
+            {% type_if : if {{ course.type_ }} == {{ type }} %}
+            <option value="{{ type }}" selected>{{ type }}</option>
+            {% else %}
+            <option value="{{ type }}">{{ type }}</option>
+            {% endif type_if %}
+            {% endfor types_list %}
+        </select>
         {% address_if : if {{ course.type_ }} == offline %}
-        <input type="text" placeholder="address" name="address" value="{{ course.address }}">
+        <input type="text" placeholder="address" name="address" id="address" value="{{ course.address }}">
         {% else %}
-        <input type="text" placeholder="platform" name="platform" value="{{ course.platform }}">
+        <input type="text" placeholder="platform" name="platform" id="platform" value="{{ course.platform }}">
         {% endif address_if %}
-        <br>
         <input type="submit">
 </form>
+<script>
+    document.getElementById('type').addEventListener('change', (event) => {
+        let target = event.target;
+        if(target.value == 'offline') {
+            target.insertAdjacentHTML('afterend', '<input type="text" placeholder="address" name="address" id="address">');
+            document.getElementById('platform').remove();
+        } else if(target.value == 'online') {
+            target.insertAdjacentHTML('afterend', '<input type="text" placeholder="platform" name="platform" id="platform">');
+            document.getElementById('address').remove();
+        }
+    });
+</script>
 {% endblock content %}
